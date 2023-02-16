@@ -38,6 +38,7 @@ mod r#str;
 mod symbol;
 mod tuple;
 mod unimplemented_env;
+mod no_std_env;
 mod val;
 mod vmcaller_checked_env;
 
@@ -54,6 +55,7 @@ pub use convert::TryConvert;
 pub use env::{Env, EnvBase};
 pub use env_val::{EnvVal, FromVal, IntoVal, TryFromVal, TryIntoVal};
 pub use unimplemented_env::UnimplementedEnv;
+pub use no_std_env::NoStdEnv;
 pub use vmcaller_checked_env::{VmCaller, VmCallerCheckedEnv};
 
 // BitSet, Status and Symbol wrap RawVals.
