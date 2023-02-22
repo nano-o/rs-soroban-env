@@ -219,7 +219,7 @@ impl Env for NoStdEnv {
         core::unimplemented!();
     }
     fn has_contract_data(&self, k: RawVal) -> RawVal {
-        core::unimplemented!();
+        RawVal::from_bool(true)
     }
     fn get_contract_data(&self, k: RawVal) -> RawVal {
         core::unimplemented!();
