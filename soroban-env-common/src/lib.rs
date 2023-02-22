@@ -54,6 +54,7 @@ mod r#str;
 mod symbol;
 mod tuple;
 mod unimplemented_env;
+mod no_std_env;
 mod val;
 mod vmcaller_env;
 
@@ -71,6 +72,7 @@ pub use env::{call_macro_with_all_host_functions, Env, EnvBase};
 pub use env_val::{TryFromVal, TryIntoVal};
 pub use unimplemented_env::UnimplementedEnv;
 pub use vmcaller_env::{VmCaller, VmCallerEnv};
+pub use no_std_env::NoStdEnv;
 
 // BitSet, Status and Symbol wrap RawVals.
 // TODO: maybe these should wrap EnvVals?
