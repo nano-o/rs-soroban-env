@@ -1,8 +1,47 @@
 use super::{Env, EnvBase, Object, RawVal, Status, Symbol};
 use core::{any, convert::Infallible};
 
+use crate::xdr::{
+        AccountId, Asset, ContractCodeEntry, ContractDataEntry, ContractEventType, ContractId,
+        CreateContractArgs, ExtensionPoint, Hash, HashIdPreimage, HostFunction, HostFunctionType,
+        InstallContractCodeArgs, Int128Parts, LedgerEntryData, LedgerKey, LedgerKeyContractCode,
+        ScAddress, ScContractCode, ScHostContextErrorCode, ScHostFnErrorCode, ScHostObjErrorCode,
+        ScHostStorageErrorCode, ScHostValErrorCode, ScMap, ScMapEntry, ScObject, ScStatusType,
+        ScUnknownErrorCode, ScVal, ScVec,
+    };
+// use Convert, InvokerType, Status, TryFromVal, TryIntoVal, VmCaller, VmCallerEnv;
+
+use crate::libc_alloc::LibcAlloc;
+#[global_allocator]
+static ALLOCATOR: LibcAlloc = LibcAlloc;
+
+// Can't do that as it pulls in std:
+// extern crate std;
+// use std::alloc::System;
+// #[global_allocator]
+// static A: System = System;
+
+extern crate alloc;
+use alloc::vec::Vec;
+use alloc::rc::Rc;
+
 #[derive(Clone, Default)]
-pub struct NoStdEnv;
+pub struct NoStdEnv {
+    // TODO: a map from contract id to ContractFunctionSet
+    contracts: Vec<Rc<dyn ContractFunctionSet>>
+}
+
+pub trait ContractFunctionSet {
+    fn call(&self, func: &Symbol, env: &NoStdEnv, args: &[RawVal]) -> Option<RawVal>;
+}
+
+impl NoStdEnv {
+    fn register_contract(&mut self, c: Rc<dyn ContractFunctionSet>) -> Result<(), Infallible> {
+        // TODO: return contract ID (Object representing BytesN<32>?
+        self.contracts.push(c);
+        Ok(())
+    }
+}
 
 impl EnvBase for NoStdEnv {
     type Error = Infallible; // TODO: is this what we want for verification?
@@ -14,7 +53,7 @@ impl EnvBase for NoStdEnv {
     fn check_same_env(&self, _other: &Self) {}
 
     fn deep_clone(&self) -> Self {
-        Self
+        unimplemented!()
     }
 
     fn bytes_copy_from_slice(
@@ -235,6 +274,7 @@ impl Env for NoStdEnv {
         unimplemented!()
     }
     fn has_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
+        // Ok(RawVal::from_bool(true))
         unimplemented!()
     }
     fn get_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {

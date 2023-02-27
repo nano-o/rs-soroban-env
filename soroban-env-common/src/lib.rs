@@ -57,6 +57,7 @@ mod unimplemented_env;
 mod no_std_env;
 mod val;
 mod vmcaller_env;
+mod libc_alloc;
 
 // Re-export the XDR definitions
 pub use stellar_xdr as xdr;
