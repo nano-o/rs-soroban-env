@@ -1,19 +1,20 @@
-use super::{Env, EnvBase, Object, RawVal, Status, Symbol};
+use soroban_env_common::{Env, EnvBase, Object, RawVal, Status, Symbol};
 use core::{any, convert::Infallible};
 
-use crate::xdr::{
-        AccountId, Asset, ContractCodeEntry, ContractDataEntry, ContractEventType, ContractId,
-        CreateContractArgs, ExtensionPoint, Hash, HashIdPreimage, HostFunction, HostFunctionType,
-        InstallContractCodeArgs, Int128Parts, LedgerEntryData, LedgerKey, LedgerKeyContractCode,
-        ScAddress, ScContractCode, ScHostContextErrorCode, ScHostFnErrorCode, ScHostObjErrorCode,
-        ScHostStorageErrorCode, ScHostValErrorCode, ScMap, ScMapEntry, ScObject, ScStatusType,
-        ScUnknownErrorCode, ScVal, ScVec,
-    };
+// use crate::xdr::{
+        // AccountId, Asset, ContractCodeEntry, ContractDataEntry, ContractEventType, ContractId,
+        // CreateContractArgs, ExtensionPoint, Hash, HashIdPreimage, HostFunction, HostFunctionType,
+        // InstallContractCodeArgs, Int128Parts, LedgerEntryData, LedgerKey, LedgerKeyContractCode,
+        // ScAddress, ScContractCode, ScHostContextErrorCode, ScHostFnErrorCode, ScHostObjErrorCode,
+        // ScHostStorageErrorCode, ScHostValErrorCode, ScMap, ScMapEntry, ScObject, ScStatusType,
+        // ScUnknownErrorCode, ScVal, ScVec,
+    // };
 // use Convert, InvokerType, Status, TryFromVal, TryIntoVal, VmCaller, VmCallerEnv;
 
-use crate::libc_alloc::LibcAlloc;
-#[global_allocator]
-static ALLOCATOR: LibcAlloc = LibcAlloc;
+// TODO: we need an allocator specific for seahorn (only using malloc)
+// use crate::libc_alloc::LibcAlloc;
+// #[global_allocator]
+// static ALLOCATOR: LibcAlloc = LibcAlloc;
 
 // Can't do that as it pulls in std:
 // extern crate std;
