@@ -37,6 +37,9 @@ pub trait ContractFunctionSet {
 }
 
 impl NoStdEnv {
+    pub fn test () {
+        print!("verification env!");
+    }
     fn register_contract(&mut self, c: Rc<dyn ContractFunctionSet>) -> Result<(), Infallible> {
         // TODO: return contract ID (Object representing BytesN<32>?
         self.contracts.push(c);
