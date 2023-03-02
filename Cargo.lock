@@ -1081,6 +1081,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "soroban-env-verification"
+version = "0.0.14"
+dependencies = [
+ "soroban-env-common",
+]
+
+[[package]]
 name = "soroban-native-sdk-macros"
 version = "0.0.14"
 dependencies = [
