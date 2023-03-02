@@ -28,6 +28,7 @@ alloc = ["stellar-xdr/alloc"]
 serde = ["dep:serde", "stellar-xdr/serde"]
 vm = ["wasmi"]
 testutils = []
+base64 = ["stellar-xdr/base64"]
 
 [package.metadata.docs.rs]
 all-features = true
