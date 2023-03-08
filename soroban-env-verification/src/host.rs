@@ -327,8 +327,13 @@ impl Env for Host {
     fn put_contract_data(&self, _: RawVal, _: RawVal) -> Result<RawVal, Self::Error> {
         unimplemented!()
     }
-    fn has_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
-        // Ok(RawVal::from_bool(true))
+    fn has_contract_data(&self, k: RawVal) -> Result<RawVal, Self::Error> {
+        // TODO implement storage_key_from_rawval
+        // NOTE this depends on contract ID
+
+        let key = self.storage_key_from_rawval(k)?;
+        // let res = self.0.storage.borrow_mut().has(&key, self.as_budget())?;
+        // Ok(RawVal::from_bool(res))
         unimplemented!()
     }
     fn get_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
@@ -353,8 +358,7 @@ impl Env for Host {
         let v = self.0.contracts.borrow();
         let cfs_opt = v.get(id);
         let cfs = cfs_opt.unwrap();
-        cfs.call(&f, self, &[]).ok_or(panic!())
-        // unimplemented!()
+        cfs.call(&f, self, &[]).ok_or(panic!()) // TODO: rust says panic is unreachable
     }
     fn try_call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
         unimplemented!()
@@ -493,4 +497,14 @@ impl Host {
             })
         }
     }
+
+    pub(crate) fn get_current_contract_id_internal(&self) -> Result<Hash, Infallible> {
+        unimplemented!()
+    }
+
+    pub(crate) fn from_host_val(&self, val: RawVal) -> Result<ScVal, Infallible> {
+        // TODO this depends on std...
+        ScVal::try_from_val(self, &val)
+    }
+
 }

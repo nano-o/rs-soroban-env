@@ -1,11 +1,16 @@
 use core::fmt::Debug;
 use stellar_xdr::ScObjectType;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
+#[cfg(feature = "alloc")]
 use stellar_xdr::{ScObject, ScStatic, ScVal};
 
 use crate::{raw_val::ConversionError, Object};
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::{BitSet, Static, Status, Symbol, Tag};
 
 use super::{
@@ -157,7 +162,7 @@ impl<E: Env> TryFromVal<E, u128> for RawVal {
 
 // ScVal conversions (that require ScObject conversions)
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<E: Env> TryFromVal<E, RawVal> for ScVal
 where
     ScObject: TryFromVal<E, Object>,
@@ -215,7 +220,7 @@ where
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<E: Env> TryFromVal<E, ScVal> for RawVal
 where
     Object: TryFromVal<E, ScObject>,
@@ -241,7 +246,7 @@ where
                 .map_err(|_| ConversionError)?
                 .to_raw(),
             ScVal::Symbol(bytes) => {
-                let ss = match std::str::from_utf8(bytes.as_slice()) {
+                let ss = match alloc::str::from_utf8(bytes.as_slice()) {
                     Ok(ss) => ss,
                     Err(_) => return Err(ConversionError),
                 };

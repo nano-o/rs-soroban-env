@@ -5,6 +5,7 @@ edition = "2021"
 rust-version = "1.67"
 
 [dependencies]
-soroban-env-common = { workspace = true }
+soroban-env-common = { workspace = true, features = ["alloc"] }
 libc-alloc = {path = "../../libc-alloc"}
 seahorn-stubs = {path = "../../seahorn-stubs/"}
+vecmap-rs = "0.1.9"

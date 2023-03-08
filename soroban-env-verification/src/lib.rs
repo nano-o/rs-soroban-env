@@ -16,3 +16,4 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
 
 mod host;
 pub(crate) mod host_object;
+pub mod storage;
