@@ -20,4 +20,11 @@ impl Host {
             Err(cvt) => panic!(),
         }
     }
+
+    pub(crate) fn usize_to_rawval_u32(&self, u: usize) -> Result<RawVal, Infallible> {
+        match u32::try_from(u) {
+            Ok(v) => Ok(v.into()),
+            Err(_) => panic!(),
+        }
+    }
 }

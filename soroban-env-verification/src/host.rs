@@ -15,8 +15,8 @@ use crate::{
     Convert, InvokerType, Status, TryFromVal, TryIntoVal, VmCaller, VmCallerEnv,
 };
 
-mod error;
-pub use error::HostError;
+// mod error;
+// pub use error::HostError;
 mod conversion;
 
 // use crate::xdr::{
@@ -67,8 +67,9 @@ impl Host {
         // return length of contracts as contract ID
         // TODO: is there a better way to do this?
         let len = self.0.contracts.borrow().len().to_be_bytes();
+        let v = TryIntoVal::try_into_val(&len, self);
         unsafe {
-            Ok(Object::unchecked_from_val(TryIntoVal::try_into_val(&len, self).unwrap()))
+            Ok(Object::unchecked_from_val(v.unwrap()))
         }
     }
 }
@@ -266,8 +267,9 @@ impl Env for Host {
     fn vec_del(&self, _: Object, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn vec_len(&self, _: Object) -> Result<RawVal, Self::Error> {
-        unimplemented!()
+    fn vec_len(&self, v: Object) -> Result<RawVal, Self::Error> {
+        let len = self.visit_obj(v, |hv: &Vec<RawVal>| Ok(hv.len()))?;
+        self.usize_to_rawval_u32(len)
     }
     fn vec_push_front(&self, _: Object, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
@@ -370,8 +372,9 @@ impl Env for Host {
     fn bytes_del(&self, _: Object, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn bytes_len(&self, _: Object) -> Result<RawVal, Self::Error> {
-        unimplemented!()
+    fn bytes_len(&self, b: Object) -> Result<RawVal, Self::Error> {
+        let len = self.visit_obj(b, |hv: &Vec<u8>| Ok(hv.len()))?;
+        self.usize_to_rawval_u32(len)
     }
     fn bytes_push(&self, _: Object, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
@@ -426,5 +429,37 @@ impl Host {
             .push(HOT::inject(hot));
         let handle = prev_len as u32;
         Ok(Object::from_type_and_handle(HOT::get_type(), handle))
+    }
+
+    pub(crate) unsafe fn unchecked_visit_val_obj<F, U>(
+        &self,
+        val: RawVal,
+        f: F,
+    ) -> Result<U, Infallible>
+    where
+        F: FnOnce(Option<&HostObject>) -> Result<U, Infallible>,
+    {
+        let r = self.0.objects.borrow();
+        let index = <Object as RawValConvertible>::unchecked_from_val(val).get_handle() as usize;
+        f(r.get(index))
+    }
+
+    pub(crate) fn visit_obj<HOT: HostObjectType, F, U>(
+        &self,
+        obj: Object,
+        f: F,
+    ) -> Result<U, Infallible>
+    where
+        F: FnOnce(&HOT) -> Result<U, Infallible>,
+    {
+        unsafe {
+            self.unchecked_visit_val_obj(obj.into(), |hopt| match hopt {
+                None => panic!(),
+                Some(hobj) => match HOT::try_extract(hobj) {
+                    None => panic!(),
+                    Some(hot) => f(hot),
+                },
+            })
+        }
     }
 }
