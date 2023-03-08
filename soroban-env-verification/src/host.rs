@@ -66,8 +66,10 @@ impl Host {
         self.0.contracts.borrow_mut().push(c);
         // return length of contracts as contract ID
         // TODO: is there a better way to do this?
-        let len = self.0.contracts.borrow().len().to_be_bytes();
-        let v = TryIntoVal::try_into_val(&len, self);
+        let l = self.0.contracts.borrow().len()-1;
+        let mut len: [u8; 32] = [0; 32];
+        len[24..].copy_from_slice(&l.to_be_bytes());
+        let v = TryIntoVal::<Host, RawVal>::try_into_val(&len, self);
         unsafe {
             Ok(Object::unchecked_from_val(v.unwrap()))
         }
@@ -98,11 +100,25 @@ impl EnvBase for Host {
 
     fn bytes_copy_to_slice(
         &self,
-        _b: Object,
-        _b_pos: RawVal,
-        _mem: &mut [u8],
+        b: Object,
+        b_pos: RawVal,
+        mem: &mut [u8],
     ) -> Result<(), Self::Error> {
-        unimplemented!()
+        let b_pos = u32::try_from(b_pos).unwrap();
+        let len = u32::try_from(mem.len()).unwrap();
+        self.visit_obj(b, move |hv: &Vec<u8>| {
+            let end_idx = b_pos
+                .checked_add(len)
+                .unwrap();
+            if b_pos as usize >= mem.len() {
+                panic!()
+            }
+            if end_idx as usize > mem.len() {
+                panic!()
+            }
+            mem.copy_from_slice(&hv.as_slice()[b_pos as usize..end_idx as usize]);
+            Ok(())
+        })
     }
 
     fn bytes_new_from_slice(&self, mem: &[u8]) -> Result<Object, Self::Error> {
@@ -323,12 +339,21 @@ impl Env for Host {
     fn create_contract_from_contract(&self, _: Object, _: Object) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn call(&self, o: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
-        let id = self.usize_from_rawval_u32_input(o.into()).unwrap();
+    fn call(&self, o: Object, f: Symbol, _: Object) -> Result<RawVal, Self::Error> {
+        let id_raw:RawVal = o.try_into_val(self).unwrap();
+        let id_32_bytes:[u8; 32] = id_raw.try_into_val(self).unwrap();
+        let mut id_8_bytes:[u8; 8] = [0;8];
+        id_8_bytes.copy_from_slice(&id_32_bytes[24..]);
+        let id:usize = usize::from_be_bytes(id_8_bytes);
+
         if self.0.contracts.borrow().len() < id {
             panic!()
         }
-        unimplemented!()
+        let v = self.0.contracts.borrow();
+        let cfs_opt = v.get(id);
+        let cfs = cfs_opt.unwrap();
+        cfs.call(&f, self, &[]).ok_or(panic!())
+        // unimplemented!()
     }
     fn try_call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
         unimplemented!()
@@ -366,8 +391,13 @@ impl Env for Host {
     fn bytes_put(&self, _: Object, _: RawVal, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn bytes_get(&self, _: Object, _: RawVal) -> Result<RawVal, Self::Error> {
-        unimplemented!()
+    fn bytes_get(&self, b: Object, i: RawVal) -> Result<RawVal, Self::Error> {
+        let i = self.usize_from_rawval_u32_input(i)?;
+        self.visit_obj(b, |hv: &Vec<u8>| {
+            hv.get(i)
+                .map(|u| Into::<RawVal>::into(Into::<u32>::into(*u)))
+                .ok_or_else(|| panic!())
+        })
     }
     fn bytes_del(&self, _: Object, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
