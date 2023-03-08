@@ -1,5 +1,23 @@
-use soroban_env_common::{Env, EnvBase, Object, RawVal, Status, Symbol};
+// use soroban_env_common::{Env, EnvBase, Object, RawVal, Status, Symbol};
+use crate::{Env, EnvBase, Object, RawVal, RawValConvertible, Symbol};
 use core::{any, convert::Infallible};
+// mod error;
+// pub use error::HostError;
+use crate::{
+    xdr::{
+        AccountId, Asset, ContractCodeEntry, ContractDataEntry, ContractEventType, ContractId,
+        CreateContractArgs, ExtensionPoint, Hash, HashIdPreimage, HostFunction, HostFunctionType,
+        InstallContractCodeArgs, Int128Parts, LedgerEntryData, LedgerKey, LedgerKeyContractCode,
+        ScAddress, ScContractCode, ScHostContextErrorCode, ScHostFnErrorCode, ScHostObjErrorCode,
+        ScHostStorageErrorCode, ScHostValErrorCode, ScMap, ScMapEntry, ScObject, ScStatusType,
+        ScUnknownErrorCode, ScVal, ScVec,
+    },
+    Convert, InvokerType, Status, TryFromVal, TryIntoVal, VmCaller, VmCallerEnv,
+};
+
+mod error;
+pub use error::HostError;
+mod conversion;
 
 // use crate::xdr::{
         // AccountId, Asset, ContractCodeEntry, ContractDataEntry, ContractEventType, ContractId,
@@ -25,26 +43,37 @@ use core::{any, convert::Infallible};
 extern crate alloc;
 use alloc::vec::Vec;
 use alloc::rc::Rc;
+use core::cell::RefCell;
+
+use crate::host_object::{HostObject, HostObjectType};
 
 #[derive(Clone, Default)]
-pub struct NoStdEnv {
+pub(crate) struct HostImpl {
     // TODO: a map from contract id to ContractFunctionSet
-    contracts: Vec<Rc<dyn ContractFunctionSet>>
+    contracts: RefCell<Vec<Rc<dyn ContractFunctionSet>>>, // TODO: why Rc here?
+    objects: RefCell<Vec<HostObject>>,
 }
+// Host is a newtype on Rc<HostImpl> so we can impl Env for it below.
+#[derive(Default, Clone)]
+pub struct Host(pub(crate) Rc<HostImpl>);
 
 pub trait ContractFunctionSet {
-    fn call(&self, func: &Symbol, env: &NoStdEnv, args: &[RawVal]) -> Option<RawVal>;
+    fn call(&self, func: &Symbol, env: &Host, args: &[RawVal]) -> Option<RawVal>;
 }
 
-impl NoStdEnv {
-    fn register_contract(&mut self, c: Rc<dyn ContractFunctionSet>) -> Result<(), Infallible> {
-        // TODO: return contract ID (Object representing BytesN<32>?
-        self.contracts.push(c);
-        Ok(())
+impl Host {
+    pub fn register_contract(&self, c: Rc<dyn ContractFunctionSet>) -> Result<Object, Infallible> {
+        self.0.contracts.borrow_mut().push(c);
+        // return length of contracts as contract ID
+        // TODO: is there a better way to do this?
+        let len = self.0.contracts.borrow().len().to_be_bytes();
+        unsafe {
+            Ok(Object::unchecked_from_val(TryIntoVal::try_into_val(&len, self).unwrap()))
+        }
     }
 }
 
-impl EnvBase for NoStdEnv {
+impl EnvBase for Host {
     type Error = Infallible; // TODO: is this what we want for verification?
 
     fn as_mut_any(&mut self) -> &mut dyn any::Any {
@@ -75,8 +104,8 @@ impl EnvBase for NoStdEnv {
         unimplemented!()
     }
 
-    fn bytes_new_from_slice(&self, _mem: &[u8]) -> Result<Object, Self::Error> {
-        unimplemented!()
+    fn bytes_new_from_slice(&self, mem: &[u8]) -> Result<Object, Self::Error> {
+        self.add_host_object::<Vec<u8>>(mem.into())
     }
 
     fn log_static_fmt_val(&self, _fmt: &'static str, _v: RawVal) -> Result<(), Self::Error> {
@@ -111,7 +140,7 @@ impl EnvBase for NoStdEnv {
 }
 
 
-impl Env for NoStdEnv {
+impl Env for Host {
     fn log_value(&self, _: RawVal) -> Result<RawVal, Self::Error> {
         unimplemented!()
     }
@@ -220,8 +249,13 @@ impl Env for NoStdEnv {
     fn map_values(&self, _: Object) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn vec_new(&self, _: RawVal) -> Result<Object, Self::Error> {
-        unimplemented!()
+    fn vec_new(&self, c: RawVal) -> Result<Object, Self::Error> {
+        let capacity: usize = if c.is_void() {
+            0
+        } else {
+            self.usize_from_rawval_u32_input(c)?
+        };
+        self.add_host_object::<Vec<RawVal>>(Vec::with_capacity(capacity))
     }
     fn vec_put(&self, _: Object, _: RawVal, _: RawVal) -> Result<Object, Self::Error> {
         unimplemented!()
@@ -287,7 +321,11 @@ impl Env for NoStdEnv {
     fn create_contract_from_contract(&self, _: Object, _: Object) -> Result<Object, Self::Error> {
         unimplemented!()
     }
-    fn call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
+    fn call(&self, o: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
+        let id = self.usize_from_rawval_u32_input(o.into()).unwrap();
+        if self.0.contracts.borrow().len() < id {
+            panic!()
+        }
         unimplemented!()
     }
     fn try_call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
@@ -370,5 +408,23 @@ impl Env for NoStdEnv {
     }
     fn dummy0(&self) -> Result<RawVal, Self::Error> {
         unimplemented!()
+    }
+}
+
+impl Host {
+    pub(crate) fn add_host_object<HOT: HostObjectType>(
+        &self,
+        hot: HOT,
+    ) -> Result<Object, Infallible> {
+        let prev_len = self.0.objects.borrow().len();
+        if prev_len > u32::MAX as usize {
+            panic!();
+        }
+        self.0
+            .objects
+            .borrow_mut()
+            .push(HOT::inject(hot));
+        let handle = prev_len as u32;
+        Ok(Object::from_type_and_handle(HOT::get_type(), handle))
     }
 }

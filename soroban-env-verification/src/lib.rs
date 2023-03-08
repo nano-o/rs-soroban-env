@@ -1,6 +1,5 @@
 #![no_std]
-mod verification_env;
-pub use verification_env::NoStdEnv;
+pub use host::{Host, ContractFunctionSet};
 pub use soroban_env_common::*;
 use seahorn_stubs::error;
 use libc_alloc::LibcAlloc;
@@ -14,3 +13,6 @@ static ALLOCATOR: LibcAlloc = LibcAlloc;
 fn panic(_panic: &PanicInfo<'_>) -> ! {
     error()
 }
+
+mod host;
+pub(crate) mod host_object;
