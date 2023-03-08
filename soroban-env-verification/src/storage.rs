@@ -11,20 +11,33 @@ extern crate alloc;
 use alloc::rc::Rc;
 use core::{convert::Infallible};
 
-use soroban_env_common::Compare;
+// use soroban_env_common::Compare;
 
 use crate::xdr::{LedgerEntry, LedgerKey, ScHostStorageErrorCode};
-use crate::Host;
+use crate::{Host, host_object::HostObject};
 
 use vecmap::map::VecMap;
 
 #[derive(Clone, Default)]
 pub struct Storage {
-    pub map: VecMap<Rc<LedgerKey>, Option<Rc<LedgerEntry>>>, // TODO: why Rc?
+    // map from contract ID to map from HostObject to HostObject
+    // pub map: VecMap<[u8; 32], VecMap<Rc<HostObject>, Option<Rc<HostObject>>>>, // TODO: why Rc?
+    // TODO: for now we support only one contract
+    pub(crate) map: VecMap<Rc<HostObject>, Option<Rc<HostObject>>>, // TODO: why Rc?
 }
 
 impl Storage {
-    // TODO an alternative is to not use xdr types
+    // TODO
+}
+
+// TODO we may want to use this in the future. It could make it easier to debug failed verification
+// attemps and to express pre and post-conditions on ledger state.
+#[derive(Clone, Default)]
+struct XDRStorage {
+    pub map: VecMap<Rc<LedgerKey>, Option<Rc<LedgerEntry>>>, // TODO: why Rc?
+}
+
+impl XDRStorage {
     // may be confusing when debugging but possibly more expedient for now
 
     /// Attempts to retrieve the [LedgerEntry] associated with a given
