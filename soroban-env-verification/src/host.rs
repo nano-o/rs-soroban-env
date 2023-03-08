@@ -46,12 +46,13 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 
 use crate::host_object::{HostObject, HostObjectType};
+use crate::storage::Storage;
 
 #[derive(Clone, Default)]
 pub(crate) struct HostImpl {
-    // TODO: a map from contract id to ContractFunctionSet
-    contracts: RefCell<Vec<Rc<dyn ContractFunctionSet>>>, // TODO: why Rc here?
+    contracts: RefCell<Vec<Rc<dyn ContractFunctionSet>>>, // TODO: why Rc, why RefCell?
     objects: RefCell<Vec<HostObject>>,
+    storage: RefCell<Storage>,
 }
 // Host is a newtype on Rc<HostImpl> so we can impl Env for it below.
 #[derive(Default, Clone)]
@@ -63,13 +64,13 @@ pub trait ContractFunctionSet {
 
 impl Host {
     pub fn register_contract(&self, c: Rc<dyn ContractFunctionSet>) -> Result<Object, Infallible> {
+        // TODO: take the contract ID as parameter?
         self.0.contracts.borrow_mut().push(c);
-        // return length of contracts as contract ID
-        // TODO: is there a better way to do this?
-        let l = self.0.contracts.borrow().len()-1;
-        let mut len: [u8; 32] = [0; 32];
-        len[24..].copy_from_slice(&l.to_be_bytes());
-        let v = TryIntoVal::<Host, RawVal>::try_into_val(&len, self);
+        // return index of c as contract ID
+        let i = self.0.contracts.borrow().len()-1;
+        let mut i_bytes: [u8; 32] = [0; 32];
+        i_bytes[24..].copy_from_slice(&i.to_be_bytes());
+        let v = TryIntoVal::<Host, RawVal>::try_into_val(&i_bytes, self);
         unsafe {
             Ok(Object::unchecked_from_val(v.unwrap()))
         }
