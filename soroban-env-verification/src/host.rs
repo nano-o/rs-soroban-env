@@ -67,13 +67,7 @@ impl Host {
         // TODO: take the contract ID as parameter?
         self.0.contracts.borrow_mut().push(c);
         // return index of c as contract ID
-        let i = self.0.contracts.borrow().len()-1;
-        let mut i_bytes: [u8; 32] = [0; 32];
-        i_bytes[24..].copy_from_slice(&i.to_be_bytes());
-        let v = TryIntoVal::<Host, RawVal>::try_into_val(&i_bytes, self);
-        unsafe {
-            Ok(Object::unchecked_from_val(v.unwrap()))
-        }
+        Ok(self.usize_to_u8_vec_object(self.0.contracts.borrow().len()-1))
     }
 }
 
@@ -331,7 +325,7 @@ impl Env for Host {
         // TODO implement storage_key_from_rawval
         // NOTE this depends on contract ID
 
-        let key = self.storage_key_from_rawval(k)?;
+        // let key = self.storage_key_from_rawval(k)?;
         // let res = self.0.storage.borrow_mut().has(&key, self.as_budget())?;
         // Ok(RawVal::from_bool(res))
         unimplemented!()
@@ -346,8 +340,15 @@ impl Env for Host {
         unimplemented!()
     }
     fn call(&self, o: Object, f: Symbol, _: Object) -> Result<RawVal, Self::Error> {
-        let id_raw:RawVal = o.try_into_val(self).unwrap();
+        // TODO move the following to conversion.rs
+        let id_raw:RawVal = o.into();
         let id_32_bytes:[u8; 32] = id_raw.try_into_val(self).unwrap();
+        // panic if contract ID does not fit into 8 bytes:
+        for i in 0..23 {
+            if id_32_bytes[i] != 0 {
+                panic!();
+            }
+        }
         let mut id_8_bytes:[u8; 8] = [0;8];
         id_8_bytes.copy_from_slice(&id_32_bytes[24..]);
         let id:usize = usize::from_be_bytes(id_8_bytes);
@@ -497,14 +498,4 @@ impl Host {
             })
         }
     }
-
-    pub(crate) fn get_current_contract_id_internal(&self) -> Result<Hash, Infallible> {
-        unimplemented!()
-    }
-
-    pub(crate) fn from_host_val(&self, val: RawVal) -> Result<ScVal, Infallible> {
-        // TODO this depends on std...
-        ScVal::try_from_val(self, &val)
-    }
-
 }

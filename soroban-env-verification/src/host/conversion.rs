@@ -1,4 +1,4 @@
-use crate::{Host, RawVal};
+use crate::{Host, RawVal, Object, TryIntoVal, RawValConvertible};
 use core::convert::Infallible;
 use crate::xdr::{
     Hash, LedgerKey, LedgerKeyContractData, ScHostFnErrorCode, ScHostObjErrorCode,
@@ -32,12 +32,12 @@ impl Host {
         }
     }
 
-    /// Converts a [`RawVal`] to an [`ScVal`] and combines it with the currently-executing
-    /// [`ContractID`] to produce a [`Key`], that can be used to access ledger [`Storage`].
-    pub fn storage_key_from_rawval(&self, k: RawVal) -> Result<LedgerKey, Infallible> {
-        Ok(LedgerKey::ContractData(LedgerKeyContractData {
-            contract_id: self.get_current_contract_id_internal()?,
-            key: self.from_host_val(k)?,
-        }))
+    pub(crate) fn usize_to_u8_vec_object(&self, i:usize) -> Object {
+        let mut i_bytes: [u8; 32] = [0; 32];
+        i_bytes[24..].copy_from_slice(&i.to_be_bytes());
+        let v = TryIntoVal::<Host, RawVal>::try_into_val(&i_bytes, self);
+        unsafe {
+            <Object as RawValConvertible>::unchecked_from_val(v.unwrap())
+        }
     }
 }
