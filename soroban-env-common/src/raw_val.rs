@@ -97,7 +97,7 @@ sa::const_assert!(Tag::rawval_mask() == 0xf);
 /// ```
 
 #[repr(transparent)]
-#[derive(Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub struct RawVal(u64);
 
 impl Default for RawVal {

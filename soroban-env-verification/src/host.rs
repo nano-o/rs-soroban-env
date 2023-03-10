@@ -318,17 +318,32 @@ impl Env for Host {
     fn vec_binary_search(&self, _: Object, _: RawVal) -> Result<u64, Self::Error> {
         unimplemented!()
     }
-    fn put_contract_data(&self, _: RawVal, _: RawVal) -> Result<RawVal, Self::Error> {
+    fn put_contract_data(&self, k: RawVal, v: RawVal) -> Result<RawVal, Self::Error> {
+        // TODO we assume k is a symbol and v is u32
+        let obj_k:HostObject = unsafe {
+            let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
+            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
+            res.unwrap().inject()
+        };
+        let obj_v:HostObject = unsafe {
+            let u:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
+            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
+            res.unwrap().inject()
+        };
         unimplemented!()
     }
     fn has_contract_data(&self, k: RawVal) -> Result<RawVal, Self::Error> {
-        // TODO implement storage_key_from_rawval
-        // NOTE this depends on contract ID
-
-        // let key = self.storage_key_from_rawval(k)?;
-        // let res = self.0.storage.borrow_mut().has(&key, self.as_budget())?;
-        // Ok(RawVal::from_bool(res))
-        unimplemented!()
+        // TODO: we need to generically convert the RawVal k to a HostObject
+        // There does not seem to be code that does that already (only case by case with
+        // visit_obj, but that's only for complex objects (ScObject) it seems).
+        // For now we are assuming that the key is a symbol
+        let obj_k:HostObject = unsafe {
+            let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
+            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
+            res.unwrap().inject()
+        };
+        let res = self.0.storage.borrow().has(&obj_k).unwrap();
+        Ok(RawVal::from_bool(res))
     }
     fn get_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
         unimplemented!()

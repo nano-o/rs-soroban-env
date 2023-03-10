@@ -27,7 +27,47 @@ pub struct Storage {
 }
 
 impl Storage {
-    // TODO
+    pub(crate) fn get(&mut self, key: &HostObject) -> Result<HostObject, Infallible> {
+        match self.map.get(key) {
+            None => panic!(),
+            Some(None) => panic!(),
+            Some(Some(v)) => Ok((**v).clone()),
+        }
+    }
+
+    fn put_opt(
+        &mut self,
+        key: &HostObject,
+        val: Option<HostObject>,
+    ) -> Result<(), Infallible> {
+        self.map.insert(Rc::new(key.clone()), val.map(|v| {Rc::new(v)}));
+        Ok(())
+    }
+
+    pub(crate) fn put(
+        &mut self,
+        key: &HostObject,
+        val: &HostObject,
+    ) -> Result<(), Infallible> {
+        self.put_opt(key, Some(val.clone()))
+    }
+
+    pub(crate) fn del(&mut self, key: &HostObject) -> Result<(), Infallible> {
+        self.put_opt(key, None)
+    }
+
+    /// Attempts to determine the presence of a [LedgerEntry] associated with a
+    /// given [LedgerKey] in the [Storage], returning `Ok(true)` if an entry
+    /// with the key exists and `Ok(false)` if it does not.
+    pub(crate) fn has(&self, key: &HostObject) -> Result<bool, Infallible> {
+        match self.map.get::<HostObject>(key) {
+            Some(opt_ref) => match opt_ref {
+                Some(v) => Ok(true),
+                None => Ok(false)
+            }
+            None => Ok(false),
+        }
+    }
 }
 
 // TODO we may want to use this in the future. It could make it easier to debug failed verification

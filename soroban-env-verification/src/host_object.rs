@@ -6,7 +6,7 @@ use super::{
 extern crate alloc;
 use alloc::vec::Vec;
 
-#[derive(Clone)]
+#[derive(Eq,PartialEq,Clone)]
 pub(crate) enum HostObject {
     Vec(Vec<RawVal>),
     Map(Vec<(RawVal, RawVal)>),
