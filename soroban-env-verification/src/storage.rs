@@ -1,33 +1,23 @@
-//! This module contains the [Storage] type and its supporting types, which
-//! provide the [Host](crate::Host) with access to durable ledger entries.
-//!
-//! For more details, see the [Env](crate::Env) data access functions:
-//!   - [Env::has_contract_data](crate::Env::has_contract_data)
-//!   - [Env::get_contract_data](crate::Env::get_contract_data)
-//!   - [Env::put_contract_data](crate::Env::put_contract_data)
-//!   - [Env::del_contract_data](crate::Env::del_contract_data)
-
 extern crate alloc;
 use alloc::rc::Rc;
-use core::{convert::Infallible};
+use core::convert::Infallible;
 
 // use soroban_env_common::Compare;
 
-use crate::xdr::{LedgerEntry, LedgerKey, ScHostStorageErrorCode};
-use crate::{Host, host_object::HostObject};
+// use crate::xdr::{LedgerEntry, LedgerKey};
+// use crate::{Host, host_object::HostObject};
+use crate::xdr::ScVal;
 
 use vecmap::map::VecMap;
 
 #[derive(Clone, Default)]
 pub struct Storage {
-    // map from contract ID to map from HostObject to HostObject
-    // pub map: VecMap<[u8; 32], VecMap<Rc<HostObject>, Option<Rc<HostObject>>>>, // TODO: why Rc?
-    // TODO: for now we support only one contract
-    pub(crate) map: VecMap<Rc<HostObject>, Option<Rc<HostObject>>>, // TODO: why Rc?
+    // TODO: use ScVal (has contract ID) and ScVal
+    pub(crate) map: VecMap<Rc<ScVal>, Option<Rc<ScVal>>>, // TODO: why Rc?
 }
 
 impl Storage {
-    pub(crate) fn get(&mut self, key: &HostObject) -> Result<HostObject, Infallible> {
+    pub(crate) fn get(&mut self, key: &ScVal) -> Result<ScVal, Infallible> {
         match self.map.get(key) {
             None => panic!(),
             Some(None) => panic!(),
@@ -37,8 +27,8 @@ impl Storage {
 
     fn put_opt(
         &mut self,
-        key: &HostObject,
-        val: Option<HostObject>,
+        key: &ScVal,
+        val: Option<ScVal>,
     ) -> Result<(), Infallible> {
         self.map.insert(Rc::new(key.clone()), val.map(|v| {Rc::new(v)}));
         Ok(())
@@ -46,77 +36,21 @@ impl Storage {
 
     pub(crate) fn put(
         &mut self,
-        key: &HostObject,
-        val: &HostObject,
+        key: &ScVal,
+        val: &ScVal,
     ) -> Result<(), Infallible> {
         self.put_opt(key, Some(val.clone()))
     }
 
-    pub(crate) fn del(&mut self, key: &HostObject) -> Result<(), Infallible> {
+    pub(crate) fn del(&mut self, key: &ScVal) -> Result<(), Infallible> {
         self.put_opt(key, None)
     }
 
-    /// Attempts to determine the presence of a [LedgerEntry] associated with a
-    /// given [LedgerKey] in the [Storage], returning `Ok(true)` if an entry
+    /// Attempts to determine the presence of a [ScVal] associated with a
+    /// given [ScVal] in the [Storage], returning `Ok(true)` if an entry
     /// with the key exists and `Ok(false)` if it does not.
-    pub(crate) fn has(&self, key: &HostObject) -> Result<bool, Infallible> {
-        match self.map.get::<HostObject>(key) {
-            Some(opt_ref) => match opt_ref {
-                Some(v) => Ok(true),
-                None => Ok(false)
-            }
-            None => Ok(false),
-        }
-    }
-}
-
-// TODO we may want to use this in the future. It could make it easier to debug failed verification
-// attemps and to express pre and post-conditions on ledger state.
-#[derive(Clone, Default)]
-struct XDRStorage {
-    pub map: VecMap<Rc<LedgerKey>, Option<Rc<LedgerEntry>>>, // TODO: why Rc?
-}
-
-impl XDRStorage {
-    // may be confusing when debugging but possibly more expedient for now
-
-    /// Attempts to retrieve the [LedgerEntry] associated with a given
-    /// [LedgerKey] in the [Storage], returning an error if the key is not
-    /// found.
-    pub fn get(&mut self, key: &LedgerKey) -> Result<LedgerEntry, Infallible> {
-        match self.map.get(key) {
-            None => panic!(),
-            Some(None) => panic!(),
-            Some(Some(v)) => Ok((**v).clone()),
-        }
-    }
-
-    fn put_opt(
-        &mut self,
-        key: &LedgerKey,
-        val: Option<LedgerEntry>,
-    ) -> Result<(), Infallible> {
-        self.map.insert(Rc::new(key.clone()), val.map(|v| {Rc::new(v)}));
-        Ok(())
-    }
-
-    pub fn put(
-        &mut self,
-        key: &LedgerKey,
-        val: &LedgerEntry,
-    ) -> Result<(), Infallible> {
-        self.put_opt(key, Some(val.clone()))
-    }
-
-    pub fn del(&mut self, key: &LedgerKey) -> Result<(), Infallible> {
-        self.put_opt(key, None)
-    }
-
-    /// Attempts to determine the presence of a [LedgerEntry] associated with a
-    /// given [LedgerKey] in the [Storage], returning `Ok(true)` if an entry
-    /// with the key exists and `Ok(false)` if it does not.
-    pub fn has(&mut self, key: &LedgerKey) -> Result<bool, Infallible> {
-        match self.map.get::<LedgerKey>(key) {
+    pub(crate) fn has(&self, key: &ScVal) -> Result<bool, Infallible> {
+        match self.map.get::<ScVal>(key) {
             Some(opt_ref) => match opt_ref {
                 Some(v) => Ok(true),
                 None => Ok(false)

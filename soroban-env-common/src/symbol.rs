@@ -6,6 +6,9 @@ use core::{
     str,
 };
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 /// Errors related to operations on the [Symbol] type.
 #[derive(Debug)]
 pub enum SymbolError {
@@ -108,9 +111,9 @@ impl TryFrom<&[u8]> for Symbol {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use stellar_xdr::StringM;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<const N: u32> TryFrom<StringM<N>> for Symbol {
     type Error = SymbolError;
 
@@ -118,7 +121,7 @@ impl<const N: u32> TryFrom<StringM<N>> for Symbol {
         v.as_slice().try_into()
     }
 }
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<const N: u32> TryFrom<&StringM<N>> for Symbol {
     type Error = SymbolError;
 
@@ -315,17 +318,17 @@ impl FromIterator<char> for Symbol {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::xdr::ScVal;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl TryFrom<ScVal> for Symbol {
     type Error = ConversionError;
     fn try_from(v: ScVal) -> Result<Self, Self::Error> {
         (&v).try_into()
     }
 }
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl TryFrom<&ScVal> for Symbol {
     type Error = ConversionError;
     fn try_from(v: &ScVal) -> Result<Self, Self::Error> {
@@ -337,7 +340,7 @@ impl TryFrom<&ScVal> for Symbol {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl TryFrom<Symbol> for ScVal {
     type Error = ConversionError;
     fn try_from(s: Symbol) -> Result<Self, Self::Error> {
@@ -350,7 +353,7 @@ impl TryFrom<Symbol> for ScVal {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl TryFrom<&Symbol> for ScVal {
     type Error = ConversionError;
     fn try_from(s: &Symbol) -> Result<Self, Self::Error> {

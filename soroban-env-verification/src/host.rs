@@ -72,7 +72,7 @@ impl Host {
 }
 
 impl EnvBase for Host {
-    type Error = Infallible; // TODO: is this what we want for verification?
+    type Error = Infallible; // we'll just panic on any error
 
     fn as_mut_any(&mut self) -> &mut dyn any::Any {
         self
@@ -319,31 +319,25 @@ impl Env for Host {
         unimplemented!()
     }
     fn put_contract_data(&self, k: RawVal, v: RawVal) -> Result<RawVal, Self::Error> {
-        // TODO we assume k is a symbol and v is u32
-        let obj_k:HostObject = unsafe {
-            let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
-            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
-            res.unwrap().inject()
-        };
-        let obj_v:HostObject = unsafe {
-            let u:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
-            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
-            res.unwrap().inject()
-        };
-        unimplemented!()
+        let key:&ScVal = &ScVal::try_from_val(self, &k).unwrap();
+        let val:&ScVal = &ScVal::try_from_val(self, &v).unwrap();
+        self.0.storage.borrow_mut().put(key, val);
+        Ok(().into())
     }
     fn has_contract_data(&self, k: RawVal) -> Result<RawVal, Self::Error> {
         // TODO: we need to generically convert the RawVal k to a HostObject
         // There does not seem to be code that does that already (only case by case with
         // visit_obj, but that's only for complex objects (ScObject) it seems).
         // For now we are assuming that the key is a symbol
-        let obj_k:HostObject = unsafe {
-            let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
-            let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
-            res.unwrap().inject()
-        };
-        let res = self.0.storage.borrow().has(&obj_k).unwrap();
+        // let obj_k:HostObject = unsafe {
+            // let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
+            // let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
+            // res.unwrap().inject()
+        // };
+        let key = ScVal::try_from_val(self, &k).unwrap();
+        let res = self.0.storage.borrow().has(&key).unwrap();
         Ok(RawVal::from_bool(res))
+        // unimplemented!()
     }
     fn get_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
         unimplemented!()
@@ -374,7 +368,7 @@ impl Env for Host {
         let v = self.0.contracts.borrow();
         let cfs_opt = v.get(id);
         let cfs = cfs_opt.unwrap();
-        cfs.call(&f, self, &[]).ok_or(panic!()) // TODO: rust says panic is unreachable
+        cfs.call(&f, self, &[]).ok_or_else(|| panic!())
     }
     fn try_call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
         unimplemented!()
@@ -465,6 +459,38 @@ impl Env for Host {
     }
 }
 
+impl Convert<&Object, ScObject> for Host {
+    type Error = Infallible;
+    fn convert(&self, ob: &Object) -> Result<ScObject, Self::Error> {
+        unimplemented!()
+        // self.from_host_obj(*ob)
+    }
+}
+
+impl Convert<Object, ScObject> for Host {
+    type Error = Infallible;
+    fn convert(&self, ob: Object) -> Result<ScObject, Self::Error> {
+        unimplemented!()
+        // self.from_host_obj(ob)
+    }
+}
+
+impl Convert<&ScObject, Object> for Host {
+    type Error = Infallible;
+    fn convert(&self, ob: &ScObject) -> Result<Object, Self::Error> {
+        unimplemented!()
+        // self.to_host_obj(ob)
+    }
+}
+
+impl Convert<ScObject, Object> for Host {
+    type Error = Infallible;
+    fn convert(&self, ob: ScObject) -> Result<Object, Self::Error> {
+        unimplemented!()
+        // self.to_host_obj(&ob)
+    }
+}
+
 impl Host {
     pub(crate) fn add_host_object<HOT: HostObjectType>(
         &self,
@@ -513,4 +539,5 @@ impl Host {
             })
         }
     }
+
 }
