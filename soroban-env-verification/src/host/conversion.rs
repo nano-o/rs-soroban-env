@@ -37,7 +37,7 @@ impl Host {
         i_bytes[24..].copy_from_slice(&i.to_be_bytes());
         let v = TryIntoVal::<Host, RawVal>::try_into_val(&i_bytes, self);
         unsafe {
-            <Object as RawValConvertible>::unchecked_from_val(v.unwrap())
+            <Object as RawValConvertible>::unchecked_from_val(v.unwrap_or_else(|_| panic!()))
         }
     }
 }

@@ -99,12 +99,12 @@ impl EnvBase for Host {
         b_pos: RawVal,
         mem: &mut [u8],
     ) -> Result<(), Self::Error> {
-        let b_pos = u32::try_from(b_pos).unwrap();
-        let len = u32::try_from(mem.len()).unwrap();
+        let b_pos = u32::try_from(b_pos).unwrap_or_else(|_| panic!());
+        let len = u32::try_from(mem.len()).unwrap_or_else(|_| panic!());
         self.visit_obj(b, move |hv: &Vec<u8>| {
             let end_idx = b_pos
                 .checked_add(len)
-                .unwrap();
+                .unwrap_or_else(|| panic!());
             if b_pos as usize >= mem.len() {
                 panic!()
             }
@@ -319,14 +319,14 @@ impl Env for Host {
         unimplemented!()
     }
     fn put_contract_data(&self, k: RawVal, v: RawVal) -> Result<RawVal, Self::Error> {
-        let key:&ScVal = &ScVal::try_from_val(self, &k).unwrap();
-        let val:&ScVal = &ScVal::try_from_val(self, &v).unwrap();
-        self.0.storage.borrow_mut().put(key, val).unwrap();
+        let key:&ScVal = &ScVal::try_from_val(self, &k).unwrap_or_else(|_| panic!());
+        let val:&ScVal = &ScVal::try_from_val(self, &v).unwrap_or_else(|_| panic!());
+        self.0.storage.borrow_mut().put(key, val).unwrap_or_else(|_| panic!());
         Ok(().into())
     }
     fn has_contract_data(&self, k: RawVal) -> Result<RawVal, Self::Error> {
-        let key = ScVal::try_from_val(self, &k).unwrap();
-        let res = self.0.storage.borrow().has(&key).unwrap();
+        let key = ScVal::try_from_val(self, &k).unwrap_or_else(|_| panic!());
+        let res = self.0.storage.borrow().has(&key).unwrap_or_else(|_| panic!());
         Ok(RawVal::from_bool(res))
         // Ok(RawVal::from_bool(false))
     }
@@ -340,9 +340,8 @@ impl Env for Host {
         unimplemented!()
     }
     fn call(&self, o: Object, f: Symbol, _: Object) -> Result<RawVal, Self::Error> {
-        // TODO move the following to conversion.rs
         let id_raw:RawVal = o.into();
-        let id_32_bytes:[u8; 32] = id_raw.try_into_val(self).unwrap();
+        let id_32_bytes:[u8; 32] = id_raw.try_into_val(self).unwrap_or_else(|_| panic!());
         // panic if contract ID does not fit into 8 bytes:
         for i in 0..23 {
             if id_32_bytes[i] != 0 {
@@ -358,7 +357,7 @@ impl Env for Host {
         }
         let v = self.0.contracts.borrow();
         let cfs_opt = v.get(id);
-        let cfs = cfs_opt.unwrap();
+        let cfs = cfs_opt.unwrap_or_else(|| panic!());
         cfs.call(&f, self, &[]).ok_or_else(|| panic!())
     }
     fn try_call(&self, _: Object, _: Symbol, _: Object) -> Result<RawVal, Self::Error> {
