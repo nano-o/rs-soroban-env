@@ -321,23 +321,14 @@ impl Env for Host {
     fn put_contract_data(&self, k: RawVal, v: RawVal) -> Result<RawVal, Self::Error> {
         let key:&ScVal = &ScVal::try_from_val(self, &k).unwrap();
         let val:&ScVal = &ScVal::try_from_val(self, &v).unwrap();
-        self.0.storage.borrow_mut().put(key, val);
+        self.0.storage.borrow_mut().put(key, val).unwrap();
         Ok(().into())
     }
     fn has_contract_data(&self, k: RawVal) -> Result<RawVal, Self::Error> {
-        // TODO: we need to generically convert the RawVal k to a HostObject
-        // There does not seem to be code that does that already (only case by case with
-        // visit_obj, but that's only for complex objects (ScObject) it seems).
-        // For now we are assuming that the key is a symbol
-        // let obj_k:HostObject = unsafe {
-            // let sym:Symbol = <Symbol as RawValConvertible>::unchecked_from_val(k);
-            // let res: Result<Vec<u8>, _> = sym.into_iter().map(<u8 as TryFrom<char>>::try_from).collect();
-            // res.unwrap().inject()
-        // };
         let key = ScVal::try_from_val(self, &k).unwrap();
         let res = self.0.storage.borrow().has(&key).unwrap();
         Ok(RawVal::from_bool(res))
-        // unimplemented!()
+        // Ok(RawVal::from_bool(false))
     }
     fn get_contract_data(&self, _: RawVal) -> Result<RawVal, Self::Error> {
         unimplemented!()
